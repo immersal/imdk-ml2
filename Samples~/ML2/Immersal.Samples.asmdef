@@ -1,0 +1,22 @@
+{
+    "name": "Immersal.Samples.ML2",
+    "references": [
+        "Immersal.Core",
+        "Immersal.Core.Editor",
+        "Immersal.ML2",
+        "MagicLeap.SDK",
+        "Unity.XR.ARFoundation",
+        "Unity.XR.ARSubsystems",
+        "Unity.XR.CoreUtils",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

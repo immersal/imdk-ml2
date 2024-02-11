@@ -1,0 +1,27 @@
+{
+    "name": "Immersal.ML2",
+    "references": [
+        "Immersal.Core",
+        "Immersal.Core.Editor",
+        "Unity.XR.ARFoundation",
+        "Unity.XR.ARSubsystems",
+        "Unity.XR.CoreUtils",
+        "Unity.TextMeshPro",
+        "MagicLeap.SDK"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.magicleap.unitysdk",
+            "expression": "1.7.0",
+            "define": "IMMERSAL_MAGIC_LEAP_ENABLED"
+        }
+    ],
+    "noEngineReferences": false
+}
