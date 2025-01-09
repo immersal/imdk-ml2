@@ -4,7 +4,8 @@ This is the support package for using Magic Leap 2 with the Immersal SDK 2.0+.
 # Compatibility
 
 - Unity 2022.3 LTS
-- Immersal Core 2.0.0
+- Immersal Core 2.1.0
+- Magic Leap Unity SDK 1.7.0
 
 # Installation steps
 

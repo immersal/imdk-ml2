@@ -1,4 +1,4 @@
-﻿/*===============================================================================
+/*===============================================================================
 Copyright (C) 2024 Immersal - Part of Hexagon. All Rights Reserved.
 
 This file is part of the Immersal SDK.
@@ -39,10 +39,11 @@ namespace Immersal.XR.MagicLeap.Samples.Util
             ITrackingStatus status = m_Sdk.TrackingStatus;
             if (status != null)
             {
-                m_LabelText.text = string.Format(StringFormat, status.LocalizationSuccessCount, status.LocalizationAttemptCount);
+                m_LabelText.text = string.Format(StringFormat, status.LocalizationSuccessCount,
+                    status.LocalizationAttemptCount);
             }
-            
-            
+
+
         }
     }
 }

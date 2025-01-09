@@ -1,12 +1,12 @@
 {
   "name": "com.immersal.ml2",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "displayName": "Immersal SDK ML2",
   "description": "Magic Leap 2 support for Immersal Unity SDK",
   "unity": "2022.3",
   "documentationUrl": "https://developers.immersal.com/docs/unitysdk/platforms/magicleap2/",
   "dependencies": {
-    "com.immersal.core" : "2.0.0",
+    "com.immersal.core" : "2.1.0",
     "com.magicleap.unitysdk" : "1.7.0"
  },
  "keywords": [

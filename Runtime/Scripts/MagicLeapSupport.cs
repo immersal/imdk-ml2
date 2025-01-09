@@ -14,6 +14,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -48,19 +49,29 @@ namespace Immersal.XR.MagicLeap
         private Vector3 m_CapturedCameraPos;
         private Quaternion m_CapturedCameraRot;
         
-        private byte[] pixelBuffer;
+        //private byte[] pixelBuffer;
 
+        private IPlatformConfiguration m_Configuration;
         private bool m_CameraDeviceAvailable;
         private bool m_IsCapturingVideo;
         private bool m_ConfigDone;
         private bool m_CameraConfigDone;
         private bool m_CameraIsReady;
         
-        private Task<CameraData> m_CurrentCameraDataTask;
-        private IntPtr m_PixelBuffer = IntPtr.Zero;
+        private Task<(bool, CameraData)> m_CurrentCameraDataTask;
         private bool m_isTracking = false;
         
         public async Task<IPlatformUpdateResult> UpdatePlatform()
+        {
+            return await UpdateWithConfiguration(m_Configuration);
+        }
+        
+        public async Task<IPlatformUpdateResult> UpdatePlatform(IPlatformConfiguration oneShotConfiguration)
+        {
+            return await UpdateWithConfiguration(oneShotConfiguration);
+        }
+        
+        private async Task<IPlatformUpdateResult> UpdateWithConfiguration(IPlatformConfiguration configuration)
         {
             Debug.Log("ML2-UpdatePlatform");
             if (!m_ConfigDone)
@@ -73,12 +84,12 @@ namespace Immersal.XR.MagicLeap
             };
 
             m_CurrentCameraDataTask = GetCameraData();
-            CameraData data = await m_CurrentCameraDataTask;
+            (bool success, CameraData data) = await m_CurrentCameraDataTask;
 
             // UpdateResult
             SimplePlatformUpdateResult r = new SimplePlatformUpdateResult()
             {
-                Success = true,
+                Success = success,
                 Status = platformStatus,
                 CameraData = data
             };
@@ -86,51 +97,41 @@ namespace Immersal.XR.MagicLeap
             return r;
         }
         
-        private async Task<CameraData> GetCameraData()
+        private async Task<(bool, CameraData)> GetCameraData()
         {
-            // CameraData
-            CameraData data = new CameraData();
+            if (m_CapturedYUVPlane.Data is null || m_CapturedYUVPlane.Data.Length <= 0) return (false, null);
+            if (!TryAcquireIntrinsics(out Vector4 intrinsics, out double[] distortion)) return (false, null);
 
-            await Task.Run(() =>
+            MagicLeapImageData imageData = new MagicLeapImageData(m_CapturedYUVPlane);
+            CameraData data = new CameraData(imageData)
             {
-                data = default;
+                CameraPositionOnCapture = m_CapturedCameraPos,
+                CameraRotationOnCapture = m_CapturedCameraRot,
+                Intrinsics = intrinsics,
+                Distortion = distortion,
+                Width = (int)m_CapturedYUVPlane.Width,
+                Height = (int)m_CapturedYUVPlane.Height,
+                Orientation = GetOrientation()
+            };
 
-                if (m_CapturedYUVPlane.Data is null || m_CapturedYUVPlane.Data.Length <= 0) return false;
-                if (!TryAcquireIntrinsics(out Vector4 intrinsics, out double[] distortion)) return false;
-
-                GetUnpaddedBytes(m_CapturedYUVPlane, false, out byte[] processedImageData);
-
-                if (processedImageData is null || processedImageData.Length <= 0) return false;
-
-                unsafe
-                {
-                    fixed (byte* pinnedData = processedImageData)
-                    {
-                        m_PixelBuffer = (IntPtr)pinnedData;
-                    }
-                }
-
-                data.PixelBuffer = m_PixelBuffer;
-                data.CameraPositionOnCapture = m_CapturedCameraPos;
-                data.CameraRotationOnCapture = m_CapturedCameraRot;
-                data.Intrinsics = intrinsics;
-                data.Distortion = distortion;
-                data.Width = (int)m_CapturedYUVPlane.Width;
-                data.Height = (int)m_CapturedYUVPlane.Height;
-                data.Orientation = GetOrientation();
-
-                return data.PixelBuffer != IntPtr.Zero;
-            });
-
-            return data;
+            return (true, data);
         }
 
         private Quaternion GetOrientation()
         {
             return Quaternion.Euler(0f, 0f, 180.0f);
         }
-
+        
         public async Task<IPlatformConfigureResult> ConfigurePlatform()
+        {
+            PlatformConfiguration config = new PlatformConfiguration
+            {
+                CameraDataFormat = CameraDataFormat.SingleChannel
+            };
+            return await ConfigurePlatform(config);
+        }
+
+        public async Task<IPlatformConfigureResult> ConfigurePlatform(IPlatformConfiguration configuration)
         {
             m_ConfigDone = await ConfigureML();
             
@@ -347,30 +348,6 @@ namespace Immersal.XR.MagicLeap
             m_CapturedIntrinsics = resultExtras.Intrinsics;
         }
         
-        /*
-        public bool TryAcquirePngBytes(out byte[] pngBytes, out CaptureData data)
-        {
-            data = default;
-            pngBytes = null;
-
-            if (m_CapturedYUVPlane.Data is null || m_CapturedYUVPlane.Data.Length <= 0) return false;
-            if (!TryAcquireIntrinsics(out Vector4 intrinsics, out double[] distortion)) return false;
-
-            data.CameraTransform = m_CameraTransformAtLatestCapture;
-            data.Intrinsics = intrinsics;
-            data.Distortion = distortion;
-            data.Width = (int)m_CapturedYUVPlane.Width;
-            data.Height = (int)m_CapturedYUVPlane.Height;
-
-            GetUnpaddedBytes(m_CapturedYUVPlane, true, out byte[] grayBytes);
-
-            const uint channel = 1;
-            pngBytes = ImageConversion.EncodeArrayToPNG(grayBytes, pngFormat, m_CapturedYUVPlane.Width, m_CapturedYUVPlane.Height, m_CapturedYUVPlane.Width * channel);
-
-            return !(pngBytes is null || pngBytes.Length <= 0);
-        }
-        */
-        
         private bool TryAcquireIntrinsics(out Vector4 intr, out double[] dist)
         {
             intr = Vector4.zero;
@@ -394,33 +371,6 @@ namespace Immersal.XR.MagicLeap
             return true;
         }
         
-        private void GetUnpaddedBytes(MLCamera.PlaneInfo yBuffer, bool invertVertically, out byte[] outputBuffer)
-        {
-            byte[] data = yBuffer.Data;
-            int width = (int)yBuffer.Width, height = (int)yBuffer.Height, size = width * height;
-            int stride = invertVertically ? -(int)yBuffer.Stride : (int)yBuffer.Stride;
-            int invertStartOffset = ((int)yBuffer.Stride * height) - (int)yBuffer.Stride;
-
-            // use the same buffer internally
-            if (pixelBuffer is null || pixelBuffer.Length != size)
-            {
-                pixelBuffer = new byte[size];
-            }
-
-            unsafe
-            {
-                fixed (byte* pinnedData = data, dstPtr = pixelBuffer)
-                {
-                    byte* srcPtr = invertVertically ? pinnedData + invertStartOffset : pinnedData;
-                    if (width > 0 && height > 0) {
-                        UnsafeUtility.MemCpyStride(dstPtr, width, srcPtr, stride, width, height);
-                    }
-                }
-            }
-
-            outputBuffer = pixelBuffer;
-        }
-
         void DisplayData(MLCamera.IntrinsicCalibrationParameters cameraParameters)
         {
             Debug.LogFormat("Width: {0}", cameraParameters.Width);
@@ -447,6 +397,48 @@ namespace Immersal.XR.MagicLeap
         }
         
     }
-    
+
+    public class MagicLeapImageData : ImageData
+    {
+        public override IntPtr UnmanagedDataPointer => m_UnmanagedDataPointer;
+        public override byte[] ManagedBytes => m_Bytes;
+
+        private byte[] m_Bytes;
+        private IntPtr m_UnmanagedDataPointer;
+        private GCHandle m_managedDataHandle;
+
+        private const bool m_InvertVertically = false;
+        
+        public MagicLeapImageData(MLCamera.PlaneInfo yBuffer)
+        {
+            byte[] data = yBuffer.Data;
+            int width = (int)yBuffer.Width, height = (int)yBuffer.Height, size = width * height;
+            int stride = m_InvertVertically ? -(int)yBuffer.Stride : (int)yBuffer.Stride;
+            int invertStartOffset = ((int)yBuffer.Stride * height) - (int)yBuffer.Stride;
+
+            m_Bytes = new byte[size];
+            m_managedDataHandle = GCHandle.Alloc(m_Bytes, GCHandleType.Pinned);
+
+            unsafe
+            {
+                fixed (byte* pinnedData = data, dstPtr = m_Bytes)
+                {
+                    byte* srcPtr = m_InvertVertically ? pinnedData + invertStartOffset : pinnedData;
+                    if (width > 0 && height > 0) {
+                        UnsafeUtility.MemCpyStride(dstPtr, width, srcPtr, stride, width, height);
+                    }
+                }
+            }
+
+            m_UnmanagedDataPointer = m_managedDataHandle.AddrOfPinnedObject();
+        }
+        
+        public override void DisposeData()
+        {
+            m_managedDataHandle.Free();
+            m_UnmanagedDataPointer = IntPtr.Zero;
+        }
+    }
+
 }
 #endif

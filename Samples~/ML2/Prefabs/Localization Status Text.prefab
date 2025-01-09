@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7567129930130992694}
   - component: {fileID: 7567129930130992696}
   - component: {fileID: 7567129930130992695}
-  - component: {fileID: 2298827112127873157}
+  - component: {fileID: 6419259735007674685}
   m_Layer: 0
   m_Name: Localization Status Text
   m_TagString: Untagged
@@ -135,7 +135,7 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &2298827112127873157
+--- !u!114 &6419259735007674685
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -144,6 +144,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 7567129930130992693}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 979551cfb255a48aca612b826d40b264, type: 3}
+  m_Script: {fileID: 11500000, guid: bb026db0dc75548e59260589cd3f1085, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
